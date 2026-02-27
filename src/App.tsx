@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -37,11 +37,18 @@ interface Message {
   online: boolean;
 }
 
+type ChatMsgType = "text" | "voice" | "image" | "file";
+
 interface ChatMessage {
   id: number;
   fromMe: boolean;
   text: string;
   time: string;
+  type?: ChatMsgType;
+  fileName?: string;
+  fileSize?: string;
+  fileUrl?: string;
+  duration?: number;
 }
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -310,25 +317,171 @@ function ProfilePage() {
 
 // ─── Messages Page ────────────────────────────────────────────────────────────
 
+const WALLPAPERS = [
+  { id: "none", label: "Нет", style: {} },
+  { id: "dark", label: "Тёмный", style: { background: "linear-gradient(135deg,#0d0d0d 0%,#1a1200 100%)" } },
+  { id: "gold", label: "Золото", style: { background: "linear-gradient(135deg,#1a1000 0%,#2d1e00 50%,#1a1000 100%)" } },
+  { id: "night", label: "Ночь", style: { background: "linear-gradient(160deg,#0a0a1a 0%,#0d1525 50%,#0a0f0a 100%)" } },
+  { id: "forest", label: "Лес", style: { background: "linear-gradient(160deg,#061209 0%,#0d2010 100%)" } },
+  { id: "cosmos", label: "Космос", style: { background: "radial-gradient(ellipse at 30% 20%,#1a0030 0%,#050010 60%,#000510 100%)" } },
+];
+
+function VoiceRecorder({ onSend }: { onSend: (dur: number) => void }) {
+  const [recording, setRecording] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mediaRef = useRef<MediaRecorder | null>(null);
+
+  const start = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      mediaRef.current = mr;
+      mr.start();
+      setRecording(true);
+      setSeconds(0);
+      timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000);
+    } catch { alert("Нет доступа к микрофону"); }
+  };
+
+  const stop = () => {
+    mediaRef.current?.stop();
+    mediaRef.current?.stream.getTracks().forEach(t => t.stop());
+    if (timerRef.current) clearInterval(timerRef.current);
+    const dur = seconds;
+    setRecording(false);
+    setSeconds(0);
+    onSend(dur || 1);
+  };
+
+  const cancel = () => {
+    mediaRef.current?.stop();
+    mediaRef.current?.stream.getTracks().forEach(t => t.stop());
+    if (timerRef.current) clearInterval(timerRef.current);
+    setRecording(false);
+    setSeconds(0);
+  };
+
+  if (recording) return (
+    <div className="flex items-center gap-2">
+      <button onClick={cancel} className="p-2 text-destructive hover:opacity-80 transition-opacity"><Icon name="X" size={18} /></button>
+      <div className="flex items-center gap-1.5 flex-1">
+        <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+        <span className="text-sm text-destructive font-mono">
+          {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}
+        </span>
+      </div>
+      <button onClick={stop} className="p-2 bg-primary rounded-xl text-primary-foreground hover:opacity-90"><Icon name="Send" size={16} /></button>
+    </div>
+  );
+
+  return (
+    <button onClick={start} className="p-2 text-muted-foreground hover:text-primary transition-colors">
+      <Icon name="Mic" size={18} />
+    </button>
+  );
+}
+
+function ChatBubble({ m }: { m: ChatMessage }) {
+  const base = `max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${m.fromMe ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-card border border-border rounded-bl-sm"}`;
+  const time = <p className={`text-[10px] mt-1 ${m.fromMe ? "text-primary-foreground/60 text-right" : "text-muted-foreground"}`}>{m.time}</p>;
+
+  if (m.type === "voice") return (
+    <div className={base}>
+      <div className="flex items-center gap-2">
+        <Icon name="Mic" size={16} />
+        <div className="flex gap-0.5 items-end h-5">
+          {Array.from({ length: 18 }).map((_, i) => (
+            <div key={i} className="w-0.5 rounded-full opacity-70" style={{ height: `${Math.max(3, Math.sin(i * 0.8) * 10 + 12)}px`, background: "currentColor" }} />
+          ))}
+        </div>
+        <span className="text-xs opacity-70 ml-1">{m.duration}с</span>
+      </div>
+      {time}
+    </div>
+  );
+
+  if (m.type === "image") return (
+    <div className={`max-w-[75%] rounded-2xl overflow-hidden ${m.fromMe ? "rounded-br-sm" : "rounded-bl-sm"}`}>
+      <img src={m.fileUrl} alt="фото" className="w-full max-h-60 object-cover" />
+      <div className={`px-3 py-1.5 ${m.fromMe ? "bg-primary" : "bg-card border-x border-b border-border"}`}>
+        {time}
+      </div>
+    </div>
+  );
+
+  if (m.type === "file") return (
+    <div className={base}>
+      <div className="flex items-center gap-2">
+        <div className={`p-2 rounded-lg ${m.fromMe ? "bg-primary-foreground/20" : "bg-muted"}`}>
+          <Icon name="File" size={20} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium truncate">{m.fileName}</p>
+          <p className="text-xs opacity-60">{m.fileSize}</p>
+        </div>
+        <Icon name="Download" size={16} className="shrink-0 opacity-60" />
+      </div>
+      {time}
+    </div>
+  );
+
+  return (
+    <div className={base}>
+      <p>{m.text}</p>
+      {time}
+    </div>
+  );
+}
+
 function MessagesPage() {
   const [active, setActive] = useState<Message | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(CHAT_HISTORY);
   const [input, setInput] = useState("");
+  const [showWallpaper, setShowWallpaper] = useState(false);
+  const [wallpaper, setWallpaper] = useState("none");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const now = () => new Date().toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" });
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   const send = () => {
     if (!input.trim()) return;
-    setChatMessages(m => [...m, {
-      id: Date.now(), fromMe: true, text: input,
-      time: new Date().toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" }),
-    }]);
+    setChatMessages(m => [...m, { id: Date.now(), fromMe: true, text: input, time: now(), type: "text" }]);
     setInput("");
   };
+
+  const sendVoice = (duration: number) => {
+    setChatMessages(m => [...m, { id: Date.now(), fromMe: true, text: "", time: now(), type: "voice", duration }]);
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const isImage = file.type.startsWith("image/");
+    const kb = Math.round(file.size / 1024);
+    const size = kb > 1024 ? `${(kb / 1024).toFixed(1)} МБ` : `${kb} КБ`;
+    setChatMessages(m => [...m, {
+      id: Date.now(), fromMe: true, text: "", time: now(),
+      type: isImage ? "image" : "file",
+      fileName: file.name, fileSize: size, fileUrl: url,
+    }]);
+    e.target.value = "";
+  };
+
+  const wallpaperStyle = WALLPAPERS.find(w => w.id === wallpaper)?.style ?? {};
 
   if (active) {
     return (
       <div className="max-w-xl mx-auto h-[calc(100vh-140px)] flex flex-col animate-scale-in">
+        {/* Header */}
         <div className="flex items-center gap-3 p-4 glass rounded-2xl mb-3">
-          <button onClick={() => setActive(null)} className="text-muted-foreground hover:text-foreground transition-colors mr-1">
+          <button onClick={() => { setActive(null); setShowWallpaper(false); }} className="text-muted-foreground hover:text-foreground transition-colors mr-1">
             <Icon name="ChevronLeft" size={20} />
           </button>
           <Avatar initials={active.avatar} online={active.online} />
@@ -339,31 +492,60 @@ function MessagesPage() {
           <div className="ml-auto flex gap-1 text-muted-foreground">
             <button className="p-2 hover:text-primary transition-colors rounded-xl hover:bg-muted/40"><Icon name="Phone" size={18} /></button>
             <button className="p-2 hover:text-primary transition-colors rounded-xl hover:bg-muted/40"><Icon name="Video" size={18} /></button>
+            <button onClick={() => setShowWallpaper(v => !v)} className={`p-2 transition-colors rounded-xl hover:bg-muted/40 ${showWallpaper ? "text-primary" : "hover:text-primary"}`}>
+              <Icon name="Palette" size={18} />
+            </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-3 px-1 mb-3">
-          {chatMessages.map(m => (
-            <div key={m.id} className={`flex ${m.fromMe ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${m.fromMe ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-card border border-border rounded-bl-sm"}`}>
-                <p>{m.text}</p>
-                <p className={`text-[10px] mt-1 ${m.fromMe ? "text-primary-foreground/60 text-right" : "text-muted-foreground"}`}>{m.time}</p>
-              </div>
+        {/* Wallpaper picker */}
+        {showWallpaper && (
+          <div className="glass rounded-2xl p-3 mb-3 animate-fade-in">
+            <p className="text-xs text-muted-foreground mb-2 px-1">Обои чата</p>
+            <div className="flex gap-2 flex-wrap">
+              {WALLPAPERS.map(w => (
+                <button key={w.id} onClick={() => { setWallpaper(w.id); setShowWallpaper(false); }}
+                  className={`flex flex-col items-center gap-1 group`}>
+                  <div className={`w-12 h-12 rounded-xl border-2 transition-all ${wallpaper === w.id ? "border-primary" : "border-border hover:border-primary/50"}`}
+                    style={w.id === "none" ? { background: "hsl(var(--card))" } : w.style} />
+                  <span className="text-[10px] text-muted-foreground">{w.label}</span>
+                </button>
+              ))}
             </div>
-          ))}
+          </div>
+        )}
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto space-y-3 px-1 mb-3 rounded-2xl" style={wallpaperStyle}>
+          <div className="py-2">
+            {chatMessages.map(m => (
+              <div key={m.id} className={`flex mb-3 ${m.fromMe ? "justify-end" : "justify-start"}`}>
+                <ChatBubble m={m} />
+              </div>
+            ))}
+            <div ref={bottomRef} />
+          </div>
         </div>
 
+        {/* Input */}
         <div className="flex gap-2 glass rounded-2xl p-2">
-          <button className="p-2 text-muted-foreground hover:text-primary transition-colors"><Icon name="Smile" size={18} /></button>
+          <input ref={fileRef} type="file" className="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip" onChange={handleFile} />
+          <button onClick={() => fileRef.current?.click()} className="p-2 text-muted-foreground hover:text-primary transition-colors">
+            <Icon name="Paperclip" size={18} />
+          </button>
           <input
             className="flex-1 bg-transparent outline-none text-sm placeholder-muted-foreground"
             placeholder="Написать сообщение..."
             value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && send()}
           />
-          <button onClick={send} className="p-2 bg-primary rounded-xl text-primary-foreground hover:opacity-90 transition-opacity">
-            <Icon name="Send" size={16} />
-          </button>
+          {input.trim() ? (
+            <button onClick={send} className="p-2 bg-primary rounded-xl text-primary-foreground hover:opacity-90 transition-opacity">
+              <Icon name="Send" size={16} />
+            </button>
+          ) : (
+            <VoiceRecorder onSend={sendVoice} />
+          )}
         </div>
       </div>
     );
