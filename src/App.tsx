@@ -554,11 +554,122 @@ const NAV: { page: Page; icon: string; label: string }[] = [
 ];
 
 const TITLES: Record<Page, string> = {
-  feed: "Орбита", search: "Поиск", messages: "Сообщения", profile: "Профиль", settings: "Настройки",
+  feed: "Eclipse", search: "Поиск", messages: "Сообщения", profile: "Профиль", settings: "Настройки",
 };
 
+// ─── Auth Screen ─────────────────────────────────────────────────────────────
+
+type AuthMode = "login" | "register";
+
+function AuthScreen({ onAuth }: { onAuth: () => void }) {
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onAuth();
+  };
+
+  return (
+    <div className="min-h-screen bg-background font-golos flex items-center justify-center px-4">
+      <div className="w-full max-w-sm animate-fade-in">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-black gradient-text tracking-tight font-montserrat">✦ Eclipse</h1>
+          <p className="text-xs text-muted-foreground mt-1 tracking-widest uppercase">твоя вселенная</p>
+        </div>
+
+        <div className="post-card rounded-2xl p-6 glow-gold">
+          <div className="flex gap-1 mb-6 p-1 bg-muted rounded-xl">
+            <button
+              onClick={() => setMode("login")}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === "login" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+              Войти
+            </button>
+            <button
+              onClick={() => setMode("register")}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === "register" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+              Регистрация
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === "register" && (
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block">Имя</label>
+                <input
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Как тебя зовут?"
+                  className="w-full bg-input border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/60 transition-colors placeholder:text-muted-foreground/50"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full bg-input border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/60 transition-colors placeholder:text-muted-foreground/50"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">Пароль</label>
+              <div className="relative">
+                <input
+                  type={showPass ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-input border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/60 transition-colors placeholder:text-muted-foreground/50 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass(!showPass)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  <Icon name={showPass ? "EyeOff" : "Eye"} size={16} />
+                </button>
+              </div>
+            </div>
+
+            {mode === "login" && (
+              <button type="button" className="text-xs text-primary/80 hover:text-primary transition-colors">
+                Забыл пароль?
+              </button>
+            )}
+
+            <button
+              type="submit"
+              className="w-full gradient-gold text-primary-foreground font-semibold py-2.5 rounded-xl text-sm transition-all hover:opacity-90 active:scale-[0.98] mt-2">
+              {mode === "login" ? "Войти в Eclipse" : "Создать аккаунт"}
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          {mode === "login" ? "Нет аккаунта? " : "Уже есть аккаунт? "}
+          <button onClick={() => setMode(mode === "login" ? "register" : "login")} className="text-primary hover:underline">
+            {mode === "login" ? "Зарегистрироваться" : "Войти"}
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── App ─────────────────────────────────────────────────────────────────────
+
 export default function App() {
+  const [authed, setAuthed] = useState(false);
   const [page, setPage] = useState<Page>("feed");
+
+  if (!authed) return <AuthScreen onAuth={() => setAuthed(true)} />;
 
   return (
     <div className="min-h-screen bg-background font-golos flex">
