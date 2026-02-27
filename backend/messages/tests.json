@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "List chats",
+      "method": "GET",
+      "path": "/?action=list&user_id=1",
+      "expectedStatus": 200,
+      "expectedBody": {"chats": []},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
