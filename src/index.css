@@ -4,49 +4,48 @@
 
 @layer base {
   :root {
-    --background: 224 20% 7%;
-    --foreground: 220 15% 92%;
+    --background: 0 0% 5%;
+    --foreground: 45 25% 90%;
 
-    --card: 224 18% 10%;
-    --card-foreground: 220 15% 92%;
+    --card: 0 0% 8%;
+    --card-foreground: 45 25% 90%;
 
-    --popover: 224 18% 10%;
-    --popover-foreground: 220 15% 92%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 45 25% 90%;
 
-    --primary: 252 80% 68%;
-    --primary-foreground: 224 20% 7%;
+    --primary: 45 85% 52%;
+    --primary-foreground: 0 0% 5%;
 
-    --secondary: 224 15% 15%;
-    --secondary-foreground: 220 15% 85%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 45 20% 80%;
 
-    --muted: 224 15% 13%;
-    --muted-foreground: 220 10% 55%;
+    --muted: 0 0% 11%;
+    --muted-foreground: 45 8% 48%;
 
-    --accent: 252 60% 25%;
-    --accent-foreground: 252 80% 85%;
+    --accent: 43 55% 16%;
+    --accent-foreground: 45 85% 70%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 224 15% 16%;
-    --input: 224 15% 14%;
-    --ring: 252 80% 68%;
+    --border: 0 0% 15%;
+    --input: 0 0% 13%;
+    --ring: 45 85% 52%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 224 20% 7%;
-    --sidebar-foreground: 220 15% 92%;
-    --sidebar-primary: 252 80% 68%;
-    --sidebar-primary-foreground: 224 20% 7%;
-    --sidebar-accent: 224 15% 13%;
-    --sidebar-accent-foreground: 220 15% 85%;
-    --sidebar-border: 224 15% 16%;
-    --sidebar-ring: 252 80% 68%;
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 45 25% 90%;
+    --sidebar-primary: 45 85% 52%;
+    --sidebar-primary-foreground: 0 0% 5%;
+    --sidebar-accent: 0 0% 11%;
+    --sidebar-accent-foreground: 45 20% 80%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 45 85% 52%;
 
-    /* Custom */
-    --glow: 252 80% 68%;
-    --purple: 252 80% 68%;
-    --blue: 217 90% 62%;
+    --gold: 45 85% 52%;
+    --gold-light: 48 90% 68%;
+    --gold-dim: 40 60% 32%;
   }
 }
 
@@ -59,14 +58,19 @@
     @apply bg-background text-foreground font-golos;
     background-image:
       radial-gradient(
-        ellipse at 20% 50%,
-        hsla(252, 60%, 15%, 0.4) 0%,
-        transparent 60%
+        ellipse at 15% 40%,
+        hsla(43, 70%, 30%, 0.07) 0%,
+        transparent 55%
       ),
       radial-gradient(
-        ellipse at 80% 20%,
-        hsla(217, 60%, 12%, 0.3) 0%,
-        transparent 55%
+        ellipse at 85% 10%,
+        hsla(45, 80%, 20%, 0.06) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        ellipse at 50% 90%,
+        hsla(40, 60%, 15%, 0.05) 0%,
+        transparent 60%
       );
     background-attachment: fixed;
   }
@@ -82,39 +86,36 @@
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary) / 0.5);
+    background: hsl(var(--primary) / 0.4);
   }
 }
 
 @layer utilities {
-  .glow-purple {
-    box-shadow: 0 0 20px hsla(252, 80%, 68%, 0.2);
+  .glow-gold {
+    box-shadow: 0 0 24px hsla(45, 85%, 52%, 0.18);
   }
   .glow-border {
-    border-color: hsl(var(--primary) / 0.4);
-    box-shadow: 0 0 12px hsla(252, 80%, 68%, 0.15);
+    border-color: hsl(var(--primary) / 0.35);
+    box-shadow: 0 0 14px hsla(45, 85%, 52%, 0.12);
   }
   .glass {
-    background: hsl(var(--card) / 0.7);
-    backdrop-filter: blur(16px);
+    background: hsl(var(--card) / 0.75);
+    backdrop-filter: blur(18px);
     border: 1px solid hsl(var(--border));
   }
   .gradient-text {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--primary)),
-      hsl(217, 90%, 72%)
-    );
+    background: linear-gradient(125deg, #d4a017 0%, #f5d060 45%, #c8860e 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  .nav-active {
-    background: hsl(var(--primary) / 0.12);
-    color: hsl(var(--primary));
+  .gradient-gold {
+    background: linear-gradient(135deg, #b8860b 0%, #f5d060 50%, #b8860b 100%);
   }
-  .nav-active svg {
+  .nav-active {
+    background: hsl(var(--primary) / 0.1);
     color: hsl(var(--primary));
+    border-left: 2px solid hsl(var(--primary));
   }
   .like-active {
     color: #f43f5e;
@@ -123,18 +124,27 @@
     background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
     transition:
-      border-color 0.2s,
-      box-shadow 0.2s;
+      border-color 0.25s,
+      box-shadow 0.25s;
   }
   .post-card:hover {
-    border-color: hsl(var(--primary) / 0.25);
-    box-shadow: 0 4px 24px hsla(252, 80%, 68%, 0.08);
+    border-color: hsl(var(--primary) / 0.22);
+    box-shadow: 0 4px 28px hsla(45, 85%, 52%, 0.07);
+  }
+  .gold-divider {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--primary) / 0.4),
+      transparent
+    );
   }
 
   @keyframes fade-in {
     from {
       opacity: 0;
-      transform: translateY(12px);
+      transform: translateY(10px);
     }
     to {
       opacity: 1;
@@ -143,7 +153,7 @@
   }
   @keyframes scale-in {
     from {
-      transform: scale(0.95);
+      transform: scale(0.96);
       opacity: 0;
     }
     to {
@@ -156,23 +166,21 @@
       transform: scale(1);
     }
     40% {
-      transform: scale(1.4);
+      transform: scale(1.45);
     }
     70% {
-      transform: scale(0.9);
+      transform: scale(0.88);
     }
     100% {
       transform: scale(1);
     }
   }
-  @keyframes slide-up {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
+  @keyframes shimmer {
+    0% {
+      background-position: -200% center;
     }
-    to {
-      opacity: 1;
-      transform: translateY(0);
+    100% {
+      background-position: 200% center;
     }
   }
 
@@ -183,10 +191,17 @@
     animation: scale-in 0.25s ease forwards;
   }
   .animate-heart-pop {
-    animation: heart-pop 0.35s ease;
+    animation: heart-pop 0.38s ease;
   }
-  .animate-slide-up {
-    animation: slide-up 0.4s ease forwards;
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsla(45, 85%, 52%, 0.15) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
   }
 
   .stagger-1 {

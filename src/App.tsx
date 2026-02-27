@@ -100,12 +100,12 @@ const SEARCH_USERS = [
 function Avatar({ initials, size = "md", online }: { initials: string; size?: "sm" | "md" | "lg" | "xl"; online?: boolean }) {
   const sizes = { sm: "w-8 h-8 text-xs", md: "w-10 h-10 text-sm", lg: "w-12 h-12 text-base", xl: "w-16 h-16 text-xl" };
   const gradients: Record<string, string> = {
-    А: "from-purple-500 to-blue-600", М: "from-blue-500 to-cyan-500",
-    Ю: "from-pink-500 to-purple-600", Д: "from-green-500 to-teal-500",
-    С: "from-orange-500 to-pink-500", К: "from-red-500 to-orange-500",
-    В: "from-violet-500 to-purple-600",
+    А: "from-yellow-600 to-amber-400", М: "from-amber-700 to-yellow-500",
+    Ю: "from-yellow-500 to-orange-400", Д: "from-amber-600 to-yellow-400",
+    С: "from-orange-600 to-amber-400", К: "from-yellow-700 to-amber-500",
+    В: "from-amber-500 to-yellow-300",
   };
-  const grad = gradients[initials[0]] || "from-purple-500 to-blue-600";
+  const grad = gradients[initials[0]] || "from-yellow-600 to-amber-400";
   return (
     <div className="relative flex-shrink-0">
       <div className={`${sizes[size]} rounded-full bg-gradient-to-br ${grad} flex items-center justify-center font-semibold text-white`}>
@@ -262,13 +262,14 @@ function ProfilePage() {
   return (
     <div className="max-w-xl mx-auto pb-8 animate-fade-in">
       <div className="h-36 rounded-2xl mb-0 relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #1e0a3c 0%, #0a1a3e 60%, #0f0f1a 100%)" }}>
-        <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 30% 50%, rgba(124,58,237,0.5) 0%, transparent 60%), radial-gradient(circle at 80% 30%, rgba(37,99,235,0.4) 0%, transparent 55%)" }} />
+        style={{ background: "linear-gradient(135deg, #0d0d0d 0%, #1a1500 60%, #0d0d0d 100%)" }}>
+        <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 30% 50%, rgba(212,160,23,0.22) 0%, transparent 55%), radial-gradient(circle at 80% 30%, rgba(180,130,10,0.15) 0%, transparent 50%)" }} />
+        <div className="absolute bottom-0 left-0 right-0 h-12" style={{ background: "linear-gradient(to top, rgba(20,16,0,0.6), transparent)" }} />
       </div>
 
       <div className="px-4 -mt-8 mb-6">
         <div className="flex justify-between items-end mb-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-xl font-bold text-white border-4 border-background">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-600 to-amber-400 flex items-center justify-center text-xl font-bold text-black border-4 border-background">
             ВЫ
           </div>
           <button onClick={() => setFollowed(!followed)}
@@ -298,7 +299,7 @@ function ProfilePage() {
       <div className="grid grid-cols-3 gap-1 px-1">
         {Array.from({ length: 9 }).map((_, i) => (
           <div key={i} className="aspect-square rounded-xl overflow-hidden flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-            style={{ background: `linear-gradient(135deg, hsl(${220 + i * 12} 30% 14%), hsl(${255 + i * 8} 40% 20%))` }}>
+            style={{ background: `linear-gradient(135deg, hsl(${30 + i * 4} 20% ${8 + i}%), hsl(${42 + i * 3} 40% ${14 + i}%))` }}>
             <Icon name="Image" size={24} className="text-white/20" />
           </div>
         ))}
@@ -509,7 +510,7 @@ function SettingsPage() {
   return (
     <div className="max-w-xl mx-auto pb-8 space-y-6 animate-fade-in">
       <div className="post-card rounded-2xl p-4 flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-lg font-bold text-white">ВЫ</div>
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-600 to-amber-400 flex items-center justify-center text-lg font-bold text-black">ВЫ</div>
         <div>
           <p className="font-bold text-lg leading-tight">Ваш Профиль</p>
           <p className="text-muted-foreground text-sm">@yourhandle</p>
@@ -564,9 +565,10 @@ export default function App() {
       {/* Sidebar desktop */}
       <aside className="hidden md:flex flex-col w-60 fixed top-0 left-0 h-full border-r border-border px-4 py-6 z-40">
         <div className="mb-8 px-2">
-          <h1 className="text-2xl font-black gradient-text tracking-tight">Орбита</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">твоя вселенная</p>
+          <h1 className="text-2xl font-black gradient-text tracking-tight font-montserrat">✦ Орбита</h1>
+          <p className="text-xs text-muted-foreground mt-0.5 tracking-widest uppercase">твоя вселенная</p>
         </div>
+        <div className="gold-divider mb-4 mx-2" />
         <nav className="space-y-0.5 flex-1">
           {NAV.map(item => (
             <button key={item.page} onClick={() => setPage(item.page)}
@@ -580,7 +582,7 @@ export default function App() {
           ))}
         </nav>
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/40 transition-all cursor-pointer">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-xs font-bold text-white">ВЫ</div>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-600 to-amber-400 flex items-center justify-center text-xs font-bold text-black">ВЫ</div>
           <div>
             <p className="font-medium text-sm leading-tight">Вы</p>
             <p className="text-xs text-muted-foreground">@yourhandle</p>
@@ -591,7 +593,7 @@ export default function App() {
       {/* Main */}
       <main className="flex-1 md:ml-60 flex flex-col min-h-screen pb-16 md:pb-0">
         <header className="sticky top-0 z-30 glass border-b border-border px-4 py-3 flex items-center justify-between">
-          <h2 className="font-bold text-lg">{TITLES[page]}</h2>
+          <h2 className="font-bold text-lg font-montserrat">{TITLES[page]}</h2>
           <button className="p-2 hover:bg-muted/50 rounded-xl transition-colors text-muted-foreground hover:text-foreground">
             <Icon name="Bell" size={20} />
           </button>
