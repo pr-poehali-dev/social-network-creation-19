@@ -4,89 +4,49 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 224 20% 7%;
+    --foreground: 220 15% 92%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 224 18% 10%;
+    --card-foreground: 220 15% 92%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 224 18% 10%;
+    --popover-foreground: 220 15% 92%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 252 80% 68%;
+    --primary-foreground: 224 20% 7%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 224 15% 15%;
+    --secondary-foreground: 220 15% 85%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 224 15% 13%;
+    --muted-foreground: 220 10% 55%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 252 60% 25%;
+    --accent-foreground: 252 80% 85%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 224 15% 16%;
+    --input: 224 15% 14%;
+    --ring: 252 80% 68%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 224 20% 7%;
+    --sidebar-foreground: 220 15% 92%;
+    --sidebar-primary: 252 80% 68%;
+    --sidebar-primary-foreground: 224 20% 7%;
+    --sidebar-accent: 224 15% 13%;
+    --sidebar-accent-foreground: 220 15% 85%;
+    --sidebar-border: 224 15% 16%;
+    --sidebar-ring: 252 80% 68%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Custom */
+    --glow: 252 80% 68%;
+    --purple: 252 80% 68%;
+    --blue: 217 90% 62%;
   }
 }
 
@@ -96,6 +56,152 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-golos;
+    background-image:
+      radial-gradient(
+        ellipse at 20% 50%,
+        hsla(252, 60%, 15%, 0.4) 0%,
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse at 80% 20%,
+        hsla(217, 60%, 12%, 0.3) 0%,
+        transparent 55%
+      );
+    background-attachment: fixed;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
+  }
+}
+
+@layer utilities {
+  .glow-purple {
+    box-shadow: 0 0 20px hsla(252, 80%, 68%, 0.2);
+  }
+  .glow-border {
+    border-color: hsl(var(--primary) / 0.4);
+    box-shadow: 0 0 12px hsla(252, 80%, 68%, 0.15);
+  }
+  .glass {
+    background: hsl(var(--card) / 0.7);
+    backdrop-filter: blur(16px);
+    border: 1px solid hsl(var(--border));
+  }
+  .gradient-text {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)),
+      hsl(217, 90%, 72%)
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .nav-active {
+    background: hsl(var(--primary) / 0.12);
+    color: hsl(var(--primary));
+  }
+  .nav-active svg {
+    color: hsl(var(--primary));
+  }
+  .like-active {
+    color: #f43f5e;
+  }
+  .post-card {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+  }
+  .post-card:hover {
+    border-color: hsl(var(--primary) / 0.25);
+    box-shadow: 0 4px 24px hsla(252, 80%, 68%, 0.08);
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes scale-in {
+    from {
+      transform: scale(0.95);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  @keyframes heart-pop {
+    0% {
+      transform: scale(1);
+    }
+    40% {
+      transform: scale(1.4);
+    }
+    70% {
+      transform: scale(0.9);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.35s ease forwards;
+  }
+  .animate-scale-in {
+    animation: scale-in 0.25s ease forwards;
+  }
+  .animate-heart-pop {
+    animation: heart-pop 0.35s ease;
+  }
+  .animate-slide-up {
+    animation: slide-up 0.4s ease forwards;
+  }
+
+  .stagger-1 {
+    animation-delay: 0.05s;
+  }
+  .stagger-2 {
+    animation-delay: 0.1s;
+  }
+  .stagger-3 {
+    animation-delay: 0.15s;
+  }
+  .stagger-4 {
+    animation-delay: 0.2s;
+  }
+  .stagger-5 {
+    animation-delay: 0.25s;
   }
 }
