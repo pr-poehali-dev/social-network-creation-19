@@ -127,47 +127,104 @@ function Avatar({ initials, size = "md", online }: { initials: string; size?: "s
 
 // ─── Feed Page ────────────────────────────────────────────────────────────────
 
-function FeedPage() {
-  const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
+const POSTS_URL = "https://functions.poehali.dev/61ea9ccb-a1d3-4d0a-bfe7-094c6cbccf7d";
+
+async function postsApi(body: Record<string, unknown>) {
+  const res = await fetch(POSTS_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const raw = await res.json();
+  return typeof raw === "string" ? JSON.parse(raw) : raw;
+}
+
+interface ApiPost {
+  id: number; text: string; likes: number; time: string;
+  user_id: number; author: string; handle: string; avatar: string; initials: string; liked: boolean;
+  comments: ApiComment[];
+}
+interface ApiComment {
+  id: number; text: string; likes: number; liked: boolean;
+  user_id: number; author: string; handle: string; avatar: string;
+}
+
+function PostAvatar({ name, avatar, size = "md" }: { name: string; avatar: string; size?: "sm" | "md" }) {
+  const sz = size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
+  const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  return (
+    <div className={`${sz} rounded-full bg-gradient-to-br from-yellow-600 to-amber-400 flex items-center justify-center font-semibold text-black flex-shrink-0 overflow-hidden`}>
+      {avatar ? <img src={avatar} className="w-full h-full object-cover" alt="" /> : initials}
+    </div>
+  );
+}
+
+function FeedPage({ user }: { user: FullUser }) {
+  const [posts, setPosts] = useState<ApiPost[]>([]);
   const [newPost, setNewPost] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [expandedPost, setExpandedPost] = useState<number | null>(null);
-  const [commentText, setCommentText] = useState("");
+  const [commentTexts, setCommentTexts] = useState<Record<number, string>>({});
   const [likeAnimating, setLikeAnimating] = useState<number | null>(null);
 
-  const toggleLikePost = (id: number) => {
-    setLikeAnimating(id);
-    setTimeout(() => setLikeAnimating(null), 400);
-    setPosts(ps => ps.map(p => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p));
+  const loadPosts = async () => {
+    try {
+      const res = await fetch(`${POSTS_URL}?user_id=${user.id}`);
+      const raw = await res.json();
+      const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+      setPosts(data.posts || []);
+    } catch { /* silent */ }
+    setLoading(false);
   };
 
-  const toggleLikeComment = (postId: number, commentId: number) => {
+  useEffect(() => { loadPosts(); }, []);
+
+  const publish = async () => {
+    if (!newPost.trim()) return;
+    setPublishing(true);
+    const data = await postsApi({ action: "create", user_id: user.id, text: newPost });
+    if (data.id) {
+      const optimistic: ApiPost = {
+        id: data.id, text: newPost, likes: 0, time: "только что",
+        user_id: user.id, author: user.name, handle: user.handle,
+        avatar: user.avatar || "", initials: user.name.slice(0, 2).toUpperCase(),
+        liked: false, comments: [],
+      };
+      setPosts(ps => [optimistic, ...ps]);
+      setNewPost("");
+    }
+    setPublishing(false);
+  };
+
+  const toggleLike = async (postId: number) => {
+    setLikeAnimating(postId);
+    setTimeout(() => setLikeAnimating(null), 400);
+    setPosts(ps => ps.map(p => p.id === postId ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p));
+    postsApi({ action: "like", user_id: user.id, post_id: postId });
+  };
+
+  const toggleLikeComment = async (postId: number, commentId: number) => {
     setPosts(ps => ps.map(p => p.id === postId ? {
       ...p, comments: p.comments.map(c => c.id === commentId ? { ...c, liked: !c.liked, likes: c.liked ? c.likes - 1 : c.likes + 1 } : c)
     } : p));
+    postsApi({ action: "like_comment", user_id: user.id, comment_id: commentId });
   };
 
-  const publish = () => {
-    if (!newPost.trim()) return;
-    setPosts(ps => [{
-      id: Date.now(), author: "Вы", handle: "@you", avatar: "ВЫ",
-      time: "только что", text: newPost, likes: 0, liked: false, comments: [],
-    }, ...ps]);
-    setNewPost("");
+  const addComment = async (postId: number) => {
+    const text = commentTexts[postId] || "";
+    if (!text.trim()) return;
+    setCommentTexts(t => ({ ...t, [postId]: "" }));
+    const data = await postsApi({ action: "comment", user_id: user.id, post_id: postId, text });
+    if (data.comment) {
+      setPosts(ps => ps.map(p => p.id === postId ? { ...p, comments: [...p.comments, data.comment] } : p));
+    }
   };
 
-  const addComment = (postId: number) => {
-    if (!commentText.trim()) return;
-    setPosts(ps => ps.map(p => p.id === postId ? {
-      ...p, comments: [...p.comments, { id: Date.now(), author: "Вы", handle: "@you", avatar: "ВЫ", text: commentText, likes: 0, liked: false }]
-    } : p));
-    setCommentText("");
-  };
+  const userInitials = user.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <div className="max-w-xl mx-auto space-y-4 pb-8">
+      {/* Compose */}
       <div className="post-card rounded-2xl p-4 animate-fade-in">
         <div className="flex gap-3">
-          <Avatar initials="ВЫ" />
+          <PostAvatar name={user.name} avatar={user.avatar || ""} />
           <div className="flex-1">
             <textarea
               className="w-full bg-transparent text-foreground placeholder-muted-foreground resize-none outline-none text-[15px] leading-relaxed min-h-[80px]"
@@ -180,19 +237,32 @@ function FeedPage() {
                 <button className="p-1.5 hover:text-primary transition-colors rounded-lg hover:bg-accent/20"><Icon name="Image" size={18} /></button>
                 <button className="p-1.5 hover:text-primary transition-colors rounded-lg hover:bg-accent/20"><Icon name="Smile" size={18} /></button>
               </div>
-              <button onClick={publish} disabled={!newPost.trim()}
+              <button onClick={publish} disabled={!newPost.trim() || publishing}
                 className="px-5 py-1.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40">
-                Опубликовать
+                {publishing ? "Публикую..." : "Опубликовать"}
               </button>
             </div>
           </div>
         </div>
       </div>
 
+      {loading && (
+        <div className="flex justify-center py-12">
+          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
+      )}
+
+      {!loading && posts.length === 0 && (
+        <div className="text-center py-16 text-muted-foreground">
+          <Icon name="Feather" size={40} className="mx-auto mb-3 opacity-30" />
+          <p>Пока нет постов. Будь первым!</p>
+        </div>
+      )}
+
       {posts.map((post, i) => (
         <div key={post.id} className={`post-card rounded-2xl p-4 animate-fade-in stagger-${Math.min(i + 1, 5)}`} style={{ opacity: 0 }}>
           <div className="flex gap-3 mb-3">
-            <Avatar initials={post.avatar} />
+            <PostAvatar name={post.author} avatar={post.avatar} />
             <div>
               <div className="font-semibold leading-tight">{post.author}</div>
               <div className="text-xs text-muted-foreground">{post.handle} · {post.time}</div>
@@ -203,7 +273,7 @@ function FeedPage() {
           <p className="text-[15px] leading-relaxed text-foreground/90 mb-4">{post.text}</p>
 
           <div className="flex items-center gap-4 pt-3 border-t border-border">
-            <button onClick={() => toggleLikePost(post.id)}
+            <button onClick={() => toggleLike(post.id)}
               className={`flex items-center gap-1.5 text-sm transition-all ${post.liked ? "like-active" : "text-muted-foreground hover:text-rose-400"}`}>
               <Icon name="Heart" size={18} className={`${likeAnimating === post.id ? "animate-heart-pop" : ""} ${post.liked ? "fill-current" : ""}`} />
               <span className="font-medium">{post.likes}</span>
@@ -222,7 +292,7 @@ function FeedPage() {
             <div className="mt-4 space-y-3 animate-fade-in">
               {post.comments.map(c => (
                 <div key={c.id} className="flex gap-2.5 p-3 rounded-xl bg-muted/40">
-                  <Avatar initials={c.avatar} size="sm" />
+                  <PostAvatar name={c.author} avatar={c.avatar} size="sm" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
                       <span className="text-sm font-semibold">{c.author}</span>
@@ -238,13 +308,13 @@ function FeedPage() {
                 </div>
               ))}
               <div className="flex gap-2 pt-1">
-                <Avatar initials="ВЫ" size="sm" />
+                <PostAvatar name={user.name} avatar={user.avatar || ""} size="sm" />
                 <div className="flex-1 flex gap-2">
                   <input
                     className="flex-1 bg-muted/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/40 placeholder-muted-foreground"
                     placeholder="Написать комментарий..."
-                    value={commentText}
-                    onChange={e => setCommentText(e.target.value)}
+                    value={commentTexts[post.id] || ""}
+                    onChange={e => setCommentTexts(t => ({ ...t, [post.id]: e.target.value }))}
                     onKeyDown={e => e.key === "Enter" && addComment(post.id)}
                   />
                   <button onClick={() => addComment(post.id)} className="px-3 py-2 rounded-xl bg-primary/20 text-primary hover:bg-primary/30 transition-colors">
@@ -1268,7 +1338,7 @@ export default function App() {
           </button>
         </header>
         <div className="flex-1 px-4 pt-6">
-          {page === "feed" && <FeedPage />}
+          {page === "feed" && <FeedPage user={user} />}
           {page === "search" && (
             viewedUser
               ? <UserProfilePage user={viewedUser} onBack={() => setViewedUser(null)} onMessage={(u) => { setViewedUser(null); goToMessage(u); }} />

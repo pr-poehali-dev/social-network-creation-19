@@ -1,0 +1,30 @@
+{
+  "tests": [
+    {
+      "name": "Get posts feed",
+      "method": "GET",
+      "path": "/?user_id=1",
+      "expectedStatus": 200,
+      "expectedBody": {"posts": []},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create post",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "create", "user_id": 1, "text": "Тестовый пост из API"},
+      "expectedStatus": 200,
+      "expectedBody": {"id": 0},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Like post",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "like", "user_id": 1, "post_id": 1},
+      "expectedStatus": 200,
+      "expectedBody": {"liked": true},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
