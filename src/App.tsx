@@ -260,6 +260,73 @@ function FeedPage() {
   );
 }
 
+// ─── User Profile View (other users) ─────────────────────────────────────────
+
+interface SearchUser { id: number; name: string; handle: string; avatar: string; bio: string; }
+
+function UserAvatar({ user, size = "md" }: { user: SearchUser; size?: "sm" | "md" | "lg" | "xl" }) {
+  const sizes = { sm: "w-8 h-8 text-xs", md: "w-10 h-10 text-sm", lg: "w-12 h-12 text-base", xl: "w-16 h-16 text-xl" };
+  const initials = user.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  return (
+    <div className={`${sizes[size]} rounded-full bg-gradient-to-br from-yellow-600 to-amber-400 flex items-center justify-center font-semibold text-black flex-shrink-0 overflow-hidden`}>
+      {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="" /> : initials}
+    </div>
+  );
+}
+
+function UserProfilePage({ user, onBack, onMessage }: { user: SearchUser; onBack: () => void; onMessage: (u: SearchUser) => void }) {
+  const [followed, setFollowed] = useState(false);
+  return (
+    <div className="max-w-xl mx-auto pb-8 animate-fade-in">
+      <button onClick={onBack} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4 text-sm">
+        <Icon name="ChevronLeft" size={18} /> Назад
+      </button>
+
+      <div className="h-32 rounded-2xl mb-0 relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #0d0d0d 0%, #1a1500 60%, #0d0d0d 100%)" }}>
+        <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 30% 50%, rgba(212,160,23,0.18) 0%, transparent 55%)" }} />
+      </div>
+
+      <div className="px-4 -mt-8 mb-6">
+        <div className="flex justify-between items-end mb-4">
+          <div className="w-16 h-16 rounded-2xl border-4 border-background overflow-hidden bg-gradient-to-br from-yellow-600 to-amber-400 flex items-center justify-center text-xl font-bold text-black">
+            {user.avatar
+              ? <img src={user.avatar} className="w-full h-full object-cover" alt="" />
+              : user.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => onMessage(user)}
+              className="px-4 py-2 rounded-xl text-sm font-semibold bg-muted text-foreground hover:bg-muted/70 transition-all flex items-center gap-1.5">
+              <Icon name="MessageCircle" size={15} /> Написать
+            </button>
+            <button onClick={() => setFollowed(f => !f)}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${followed ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground hover:opacity-90"}`}>
+              {followed ? "Подписан" : "Подписаться"}
+            </button>
+          </div>
+        </div>
+        <div className="font-bold text-xl">{user.name}</div>
+        <div className="text-muted-foreground text-sm mb-1">{user.handle}</div>
+        {user.bio && <p className="text-sm text-foreground/80 mt-1">{user.bio}</p>}
+        <div className="flex gap-6 text-sm mt-3">
+          <div><span className="font-bold">0</span> <span className="text-muted-foreground">постов</span></div>
+          <div><span className="font-bold">0</span> <span className="text-muted-foreground">подписчиков</span></div>
+          <div><span className="font-bold">0</span> <span className="text-muted-foreground">подписок</span></div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-1 px-1">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="aspect-square rounded-xl overflow-hidden flex items-center justify-center"
+            style={{ background: `linear-gradient(135deg, hsl(${30 + i * 4} 20% ${8 + i}%), hsl(${42 + i * 3} 40% ${14 + i}%))` }}>
+            <Icon name="Image" size={22} className="text-white/20" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 
 const UPDATE_PROFILE_URL = "https://functions.poehali.dev/4f1e8cca-402e-4a83-9934-160d538cc223";
@@ -641,9 +708,11 @@ function ChatBubble({ m }: { m: ChatMessage }) {
   );
 }
 
-function MessagesPage() {
-  const [active, setActive] = useState<Message | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(CHAT_HISTORY);
+function MessagesPage({ initialChat, onChatOpened }: { initialChat?: SearchUser | null; onChatOpened?: () => void }) {
+  const makeMsg = (u: SearchUser): Message => ({ id: u.id, name: u.name, avatar: u.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase(), lastMsg: "", time: "", unread: 0, online: false });
+
+  const [active, setActive] = useState<Message | null>(() => initialChat ? makeMsg(initialChat) : null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChat ? [] : CHAT_HISTORY);
   const [input, setInput] = useState("");
   const [showWallpaper, setShowWallpaper] = useState(false);
   const [wallpaper, setWallpaper] = useState("none");
@@ -654,6 +723,10 @@ function MessagesPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const now = () => new Date().toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" });
+
+  useEffect(() => {
+    if (initialChat) { setActive(makeMsg(initialChat)); setChatMessages([]); onChatOpened?.(); }
+  }, [initialChat]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -816,31 +889,38 @@ function MessagesPage() {
 
 // ─── Search Page ──────────────────────────────────────────────────────────────
 
-function SearchPage() {
-  const [query, setQuery] = useState("");
-  const [activeTag, setActiveTag] = useState("all");
+const SEARCH_URL = "https://functions.poehali.dev/cf6e129a-475a-41e4-9976-c8dbf30dde27";
 
-  const tags = [{ id: "all", label: "Все" }, { id: "people", label: "Люди" }, { id: "posts", label: "Посты" }, { id: "tags", label: "Хэштеги" }];
-  const filtered = SEARCH_USERS.filter(u => !query || u.name.toLowerCase().includes(query.toLowerCase()) || u.handle.includes(query.toLowerCase()));
+function SearchPage({ onViewProfile, onMessage }: { onViewProfile: (u: SearchUser) => void; onMessage: (u: SearchUser) => void }) {
+  const [query, setQuery] = useState("");
+  const [users, setUsers] = useState<SearchUser[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${SEARCH_URL}?q=${encodeURIComponent(query)}`);
+        const raw = await res.json();
+        const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+        setUsers(data.users || []);
+      } catch { setUsers([]); }
+      setLoading(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   return (
     <div className="max-w-xl mx-auto pb-8 animate-fade-in">
-      <div className="relative mb-4">
+      <div className="relative mb-6">
         <Icon name="Search" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
           className="w-full bg-muted/60 border border-border rounded-2xl pl-11 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 placeholder-muted-foreground transition-all"
-          placeholder="Поиск людей, постов, хэштегов..."
+          placeholder="Поиск по имени или @никнейму..."
           value={query} onChange={e => setQuery(e.target.value)}
+          autoFocus
         />
-      </div>
-
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-        {tags.map(t => (
-          <button key={t.id} onClick={() => setActiveTag(t.id)}
-            className={`px-4 py-1.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${activeTag === t.id ? "bg-primary text-primary-foreground" : "bg-muted/60 text-muted-foreground hover:text-foreground"}`}>
-            {t.label}
-          </button>
-        ))}
+        {loading && <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />}
       </div>
 
       {!query && (
@@ -861,19 +941,32 @@ function SearchPage() {
       )}
 
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">{query ? "Результаты" : "Рекомендуемые"}</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+          {query ? `Результаты по «${query}»` : "Все пользователи"}
+        </h3>
+        {users.length === 0 && !loading && (
+          <p className="text-muted-foreground text-sm text-center py-8">
+            {query ? "Никого не найдено" : "Пользователей пока нет"}
+          </p>
+        )}
         <div className="space-y-2">
-          {filtered.map((u, i) => (
+          {users.map((u, i) => (
             <div key={u.id} className={`flex items-center gap-3 p-3 post-card rounded-2xl animate-fade-in stagger-${Math.min(i + 1, 5)}`} style={{ opacity: 0 }}>
-              <Avatar initials={u.avatar} />
-              <div className="flex-1 min-w-0">
+              <button onClick={() => onViewProfile(u)} className="shrink-0">
+                <UserAvatar user={u} />
+              </button>
+              <button className="flex-1 min-w-0 text-left" onClick={() => onViewProfile(u)}>
                 <p className="font-semibold">{u.name}</p>
-                <p className="text-xs text-muted-foreground">{u.handle} · {u.bio}</p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <div className="text-xs text-muted-foreground mb-1">{u.followers}</div>
-                <button className="px-3 py-1 rounded-lg bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
-                  Подписаться
+                <p className="text-xs text-muted-foreground">{u.handle}{u.bio ? ` · ${u.bio}` : ""}</p>
+              </button>
+              <div className="flex gap-1.5 shrink-0">
+                <button onClick={() => onMessage(u)}
+                  className="p-2 rounded-xl bg-muted/60 text-muted-foreground hover:text-primary hover:bg-muted transition-colors">
+                  <Icon name="MessageCircle" size={16} />
+                </button>
+                <button onClick={() => onViewProfile(u)}
+                  className="px-3 py-1.5 rounded-xl bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-colors">
+                  Профиль
                 </button>
               </div>
             </div>
@@ -1119,11 +1212,16 @@ export default function App() {
     try { const s = localStorage.getItem("eclipse_user"); return s ? JSON.parse(s) : null; } catch { return null; }
   });
   const [page, setPage] = useState<Page>("feed");
+  const [viewedUser, setViewedUser] = useState<SearchUser | null>(null);
+  const [chatTarget, setChatTarget] = useState<SearchUser | null>(null);
 
   const updateUser = (u: FullUser) => {
     setUser(u);
     localStorage.setItem("eclipse_user", JSON.stringify(u));
   };
+
+  const goToProfile = (u: SearchUser) => { setViewedUser(u); setPage("search"); };
+  const goToMessage = (u: SearchUser) => { setChatTarget(u); setPage("messages"); };
 
   if (!user) return <AuthScreen onAuth={(u) => setUser(u)} />;
 
@@ -1138,7 +1236,7 @@ export default function App() {
         <div className="gold-divider mb-4 mx-2" />
         <nav className="space-y-0.5 flex-1">
           {NAV.map(item => (
-            <button key={item.page} onClick={() => setPage(item.page)}
+            <button key={item.page} onClick={() => { setPage(item.page); setViewedUser(null); }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${page === item.page ? "nav-active" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}>
               <Icon name={item.icon} size={19} />
               {item.label}
@@ -1171,8 +1269,12 @@ export default function App() {
         </header>
         <div className="flex-1 px-4 pt-6">
           {page === "feed" && <FeedPage />}
-          {page === "search" && <SearchPage />}
-          {page === "messages" && <MessagesPage />}
+          {page === "search" && (
+            viewedUser
+              ? <UserProfilePage user={viewedUser} onBack={() => setViewedUser(null)} onMessage={(u) => { setViewedUser(null); goToMessage(u); }} />
+              : <SearchPage onViewProfile={goToProfile} onMessage={goToMessage} />
+          )}
+          {page === "messages" && <MessagesPage initialChat={chatTarget} onChatOpened={() => setChatTarget(null)} />}
           {page === "profile" && <ProfilePage user={user} onUserUpdate={updateUser} />}
           {page === "settings" && <SettingsPage user={user} onUserUpdate={updateUser} onLogout={() => { localStorage.removeItem("eclipse_user"); setUser(null); }} />}
         </div>
@@ -1181,7 +1283,7 @@ export default function App() {
       {/* Bottom nav mobile */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-border flex z-40">
         {NAV.map(item => (
-          <button key={item.page} onClick={() => setPage(item.page)}
+          <button key={item.page} onClick={() => { setPage(item.page); setViewedUser(null); }}
             className={`flex-1 flex flex-col items-center gap-0.5 py-3 text-[10px] font-medium transition-colors relative ${page === item.page ? "text-primary" : "text-muted-foreground"}`}>
             <Icon name={item.icon} size={21} />
             <span>{item.label}</span>

@@ -1,0 +1,20 @@
+{
+  "tests": [
+    {
+      "name": "Search all users",
+      "method": "GET",
+      "path": "/?q=",
+      "expectedStatus": 200,
+      "expectedBody": {"users": []},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Search by query",
+      "method": "GET",
+      "path": "/?q=тест",
+      "expectedStatus": 200,
+      "expectedBody": {"users": []},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
