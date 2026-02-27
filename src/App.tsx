@@ -559,18 +559,49 @@ const TITLES: Record<Page, string> = {
 
 // ─── Auth Screen ─────────────────────────────────────────────────────────────
 
+const AUTH_URL = "https://functions.poehali.dev/0df01f22-7e67-4557-a23b-470296289da7";
+
+interface AuthUser {
+  id: number;
+  name: string;
+  handle: string;
+  avatar: string;
+  token: string;
+}
+
 type AuthMode = "login" | "register";
 
-function AuthScreen({ onAuth }: { onAuth: () => void }) {
+function AuthScreen({ onAuth }: { onAuth: (user: AuthUser) => void }) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onAuth();
+    setError("");
+    setLoading(true);
+    try {
+      const body: Record<string, string> = { action: mode, email, password };
+      if (mode === "register") body.name = name;
+      const res = await fetch(AUTH_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const raw = await res.json();
+      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (!res.ok) { setError(parsed.error || "Ошибка сервера"); return; }
+      localStorage.setItem("eclipse_user", JSON.stringify(parsed.user));
+      onAuth(parsed.user);
+    } catch {
+      setError("Ошибка соединения");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -644,10 +675,15 @@ function AuthScreen({ onAuth }: { onAuth: () => void }) {
               </button>
             )}
 
+            {error && (
+              <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-xl px-3 py-2">{error}</p>
+            )}
+
             <button
               type="submit"
-              className="w-full gradient-gold text-primary-foreground font-semibold py-2.5 rounded-xl text-sm transition-all hover:opacity-90 active:scale-[0.98] mt-2">
-              {mode === "login" ? "Войти в Eclipse" : "Создать аккаунт"}
+              disabled={loading}
+              className="w-full gradient-gold text-primary-foreground font-semibold py-2.5 rounded-xl text-sm transition-all hover:opacity-90 active:scale-[0.98] mt-2 disabled:opacity-60">
+              {loading ? "Подождите..." : mode === "login" ? "Войти в Eclipse" : "Создать аккаунт"}
             </button>
           </form>
         </div>
@@ -666,10 +702,12 @@ function AuthScreen({ onAuth }: { onAuth: () => void }) {
 // ─── App ─────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [authed, setAuthed] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    try { const s = localStorage.getItem("eclipse_user"); return s ? JSON.parse(s) : null; } catch { return null; }
+  });
   const [page, setPage] = useState<Page>("feed");
 
-  if (!authed) return <AuthScreen onAuth={() => setAuthed(true)} />;
+  if (!user) return <AuthScreen onAuth={(u) => setUser(u)} />;
 
   return (
     <div className="min-h-screen bg-background font-golos flex">
@@ -692,12 +730,16 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/40 transition-all cursor-pointer">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-600 to-amber-400 flex items-center justify-center text-xs font-bold text-black">ВЫ</div>
-          <div>
-            <p className="font-medium text-sm leading-tight">Вы</p>
-            <p className="text-xs text-muted-foreground">@yourhandle</p>
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/40 transition-all cursor-pointer group"
+          onClick={() => { localStorage.removeItem("eclipse_user"); setUser(null); }}>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-600 to-amber-400 flex items-center justify-center text-xs font-bold text-black shrink-0">
+            {user.name.slice(0, 2).toUpperCase()}
           </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-sm leading-tight truncate">{user.name}</p>
+            <p className="text-xs text-muted-foreground truncate">{user.handle}</p>
+          </div>
+          <Icon name="LogOut" size={15} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
         </div>
       </aside>
 
