@@ -501,7 +501,7 @@ function SettingsPage() {
     {
       title: "Прочее", items: [
         { icon: "HelpCircle", label: "Помощь и поддержка", sub: "" },
-        { icon: "Info", label: "О приложении", sub: "Орбита v1.0" },
+        { icon: "Info", label: "О приложении", sub: "Eclipse v1.0" },
         { icon: "LogOut", label: "Выйти", sub: "", danger: true },
       ],
     },
@@ -565,7 +565,7 @@ export default function App() {
       {/* Sidebar desktop */}
       <aside className="hidden md:flex flex-col w-60 fixed top-0 left-0 h-full border-r border-border px-4 py-6 z-40">
         <div className="mb-8 px-2">
-          <h1 className="text-2xl font-black gradient-text tracking-tight font-montserrat">✦ Орбита</h1>
+          <h1 className="text-2xl font-black gradient-text tracking-tight font-montserrat">✦ Eclipse</h1>
           <p className="text-xs text-muted-foreground mt-0.5 tracking-widest uppercase">твоя вселенная</p>
         </div>
         <div className="gold-divider mb-4 mx-2" />
