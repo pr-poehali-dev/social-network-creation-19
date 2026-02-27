@@ -440,7 +440,9 @@ function MessagesPage() {
   const [input, setInput] = useState("");
   const [showWallpaper, setShowWallpaper] = useState(false);
   const [wallpaper, setWallpaper] = useState("none");
+  const [customWallpaper, setCustomWallpaper] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const wallpaperRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const now = () => new Date().toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" });
@@ -474,7 +476,20 @@ function MessagesPage() {
     e.target.value = "";
   };
 
-  const wallpaperStyle = WALLPAPERS.find(w => w.id === wallpaper)?.style ?? {};
+  const handleWallpaperFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setCustomWallpaper(url);
+    setWallpaper("custom");
+    setShowWallpaper(false);
+    e.target.value = "";
+  };
+
+  const wallpaperStyle: React.CSSProperties =
+    wallpaper === "custom" && customWallpaper
+      ? { backgroundImage: `url(${customWallpaper})`, backgroundSize: "cover", backgroundPosition: "center" }
+      : WALLPAPERS.find(w => w.id === wallpaper)?.style ?? {};
 
   if (active) {
     return (
@@ -499,18 +514,27 @@ function MessagesPage() {
         </div>
 
         {/* Wallpaper picker */}
+        <input ref={wallpaperRef} type="file" accept="image/*" className="hidden" onChange={handleWallpaperFile} />
         {showWallpaper && (
           <div className="glass rounded-2xl p-3 mb-3 animate-fade-in">
             <p className="text-xs text-muted-foreground mb-2 px-1">Обои чата</p>
             <div className="flex gap-2 flex-wrap">
               {WALLPAPERS.map(w => (
                 <button key={w.id} onClick={() => { setWallpaper(w.id); setShowWallpaper(false); }}
-                  className={`flex flex-col items-center gap-1 group`}>
+                  className="flex flex-col items-center gap-1">
                   <div className={`w-12 h-12 rounded-xl border-2 transition-all ${wallpaper === w.id ? "border-primary" : "border-border hover:border-primary/50"}`}
                     style={w.id === "none" ? { background: "hsl(var(--card))" } : w.style} />
                   <span className="text-[10px] text-muted-foreground">{w.label}</span>
                 </button>
               ))}
+              {/* Custom from gallery */}
+              <button onClick={() => wallpaperRef.current?.click()} className="flex flex-col items-center gap-1">
+                <div className={`w-12 h-12 rounded-xl border-2 transition-all flex items-center justify-center overflow-hidden ${wallpaper === "custom" ? "border-primary" : "border-border hover:border-primary/50"}`}
+                  style={customWallpaper ? { backgroundImage: `url(${customWallpaper})`, backgroundSize: "cover", backgroundPosition: "center" } : { background: "hsl(var(--muted))" }}>
+                  {!customWallpaper && <Icon name="ImagePlus" size={20} className="text-muted-foreground" />}
+                </div>
+                <span className="text-[10px] text-muted-foreground">Своё</span>
+              </button>
             </div>
           </div>
         )}
