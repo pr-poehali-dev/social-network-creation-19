@@ -262,54 +262,261 @@ function FeedPage() {
 
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 
-function ProfilePage() {
+const UPDATE_PROFILE_URL = "https://functions.poehali.dev/4f1e8cca-402e-4a83-9934-160d538cc223";
+
+async function apiUpdateProfile(body: Record<string, unknown>) {
+  const res = await fetch(UPDATE_PROFILE_URL, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  const raw = await res.json();
+  return { ok: res.ok, data: typeof raw === "string" ? JSON.parse(raw) : raw };
+}
+
+type EditSection = "none" | "info" | "password" | "email";
+
+interface FullUser extends AuthUser { bio?: string; banner?: string; email?: string; }
+
+function ProfilePage({ user, onUserUpdate }: { user: FullUser; onUserUpdate: (u: FullUser) => void }) {
   const [tab, setTab] = useState<"posts" | "liked">("posts");
-  const [followed, setFollowed] = useState(false);
+  const [editSection, setEditSection] = useState<EditSection>("none");
+
+  // info fields
+  const [name, setName] = useState(user.name);
+  const [handle, setHandle] = useState(user.handle.replace("@", ""));
+  const [bio, setBio] = useState(user.bio || "");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+
+  // password
+  const [oldPw, setOldPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [newPw2, setNewPw2] = useState("");
+
+  // email
+  const [email, setEmail] = useState(user.email || "");
+
+  // avatar / banner
+  const avatarRef = useRef<HTMLInputElement>(null);
+  const bannerRef = useRef<HTMLInputElement>(null);
+
+  const toBase64 = (file: File): Promise<string> =>
+    new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(file); });
+
+  const handleAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const b64 = await toBase64(file);
+    const { ok, data } = await apiUpdateProfile({ action: "update", user_id: user.id, avatar: b64 });
+    if (ok) onUserUpdate({ ...user, ...data.user });
+    e.target.value = "";
+  };
+
+  const handleBanner = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const b64 = await toBase64(file);
+    const { ok, data } = await apiUpdateProfile({ action: "update", user_id: user.id, banner: b64 });
+    if (ok) onUserUpdate({ ...user, ...data.user });
+    e.target.value = "";
+  };
+
+  const saveInfo = async () => {
+    setSaving(true); setErr("");
+    const { ok, data } = await apiUpdateProfile({ action: "update", user_id: user.id, name, handle, bio });
+    setSaving(false);
+    if (!ok) { setErr(data.error || "Ошибка"); return; }
+    onUserUpdate({ ...user, ...data.user });
+    setEditSection("none");
+  };
+
+  const savePassword = async () => {
+    if (newPw !== newPw2) { setErr("Пароли не совпадают"); return; }
+    if (newPw.length < 6) { setErr("Минимум 6 символов"); return; }
+    setSaving(true); setErr("");
+    const { ok, data } = await apiUpdateProfile({ action: "change_password", user_id: user.id, old_password: oldPw, new_password: newPw });
+    setSaving(false);
+    if (!ok) { setErr(data.error || "Ошибка"); return; }
+    setOldPw(""); setNewPw(""); setNewPw2("");
+    setEditSection("none");
+  };
+
+  const saveEmail = async () => {
+    setSaving(true); setErr("");
+    const { ok, data } = await apiUpdateProfile({ action: "update", user_id: user.id, email });
+    setSaving(false);
+    if (!ok) { setErr(data.error || "Ошибка"); return; }
+    onUserUpdate({ ...user, ...data.user });
+    setEditSection("none");
+  };
+
+  const initials = user.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+
+  const inputCls = "w-full bg-input border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/60 transition-colors placeholder:text-muted-foreground/50";
+  const btnPrimary = "px-5 py-2 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-all disabled:opacity-60";
+  const btnMuted = "px-5 py-2 rounded-xl text-sm font-semibold bg-muted text-muted-foreground hover:bg-muted/70 transition-all";
 
   return (
     <div className="max-w-xl mx-auto pb-8 animate-fade-in">
-      <div className="h-36 rounded-2xl mb-0 relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #0d0d0d 0%, #1a1500 60%, #0d0d0d 100%)" }}>
-        <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 30% 50%, rgba(212,160,23,0.22) 0%, transparent 55%), radial-gradient(circle at 80% 30%, rgba(180,130,10,0.15) 0%, transparent 50%)" }} />
-        <div className="absolute bottom-0 left-0 right-0 h-12" style={{ background: "linear-gradient(to top, rgba(20,16,0,0.6), transparent)" }} />
+      {/* Banner */}
+      <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={handleBanner} />
+      <div className="h-36 rounded-2xl mb-0 relative overflow-hidden cursor-pointer group" onClick={() => bannerRef.current?.click()}
+        style={user.banner ? { backgroundImage: `url(${user.banner})`, backgroundSize: "cover", backgroundPosition: "center" }
+          : { background: "linear-gradient(135deg, #0d0d0d 0%, #1a1500 60%, #0d0d0d 100%)" }}>
+        {!user.banner && <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 30% 50%, rgba(212,160,23,0.22) 0%, transparent 55%)" }} />}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded-xl px-3 py-1.5 flex items-center gap-2 text-white text-xs">
+            <Icon name="Camera" size={14} /> Сменить баннер
+          </div>
+        </div>
       </div>
 
       <div className="px-4 -mt-8 mb-6">
         <div className="flex justify-between items-end mb-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-600 to-amber-400 flex items-center justify-center text-xl font-bold text-black border-4 border-background">
-            ВЫ
+          {/* Avatar */}
+          <input ref={avatarRef} type="file" accept="image/*" className="hidden" onChange={handleAvatar} />
+          <div className="relative cursor-pointer group" onClick={() => avatarRef.current?.click()}>
+            <div className="w-16 h-16 rounded-2xl border-4 border-background overflow-hidden flex items-center justify-center bg-gradient-to-br from-yellow-600 to-amber-400 text-xl font-bold text-black">
+              {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="avatar" /> : initials}
+            </div>
+            <div className="absolute inset-0 rounded-2xl bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+              <Icon name="Camera" size={16} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
           </div>
-          <button onClick={() => setFollowed(!followed)}
-            className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${followed ? "bg-muted text-muted-foreground hover:bg-destructive/20 hover:text-destructive" : "bg-primary text-primary-foreground hover:opacity-90"}`}>
-            {followed ? "Подписан" : "Подписаться"}
+          <button onClick={() => { setEditSection(editSection === "info" ? "none" : "info"); setErr(""); }}
+            className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${editSection === "info" ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground hover:opacity-90"}`}>
+            {editSection === "info" ? "Отмена" : "Редактировать"}
           </button>
         </div>
-        <div className="font-bold text-xl">Ваш Профиль</div>
-        <div className="text-muted-foreground text-sm mb-2">@yourhandle</div>
-        <p className="text-sm text-foreground/80 mb-4">Разработчик · Мечтатель · Строю соц.сеть своей мечты 🚀</p>
-        <div className="flex gap-6 text-sm">
-          <div><span className="font-bold">142</span> <span className="text-muted-foreground">постов</span></div>
-          <div><span className="font-bold">2.4K</span> <span className="text-muted-foreground">подписчиков</span></div>
-          <div><span className="font-bold">381</span> <span className="text-muted-foreground">подписок</span></div>
-        </div>
-      </div>
 
-      <div className="flex border-b border-border mb-4 px-2">
-        {(["posts", "liked"] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-            {t === "posts" ? "Публикации" : "Понравилось"}
-          </button>
-        ))}
-      </div>
+        {editSection === "none" && (
+          <>
+            <div className="font-bold text-xl">{user.name}</div>
+            <div className="text-muted-foreground text-sm mb-2">{user.handle}</div>
+            {user.bio && <p className="text-sm text-foreground/80 mb-4">{user.bio}</p>}
+            <div className="flex gap-6 text-sm mt-3">
+              <div><span className="font-bold">0</span> <span className="text-muted-foreground">постов</span></div>
+              <div><span className="font-bold">0</span> <span className="text-muted-foreground">подписчиков</span></div>
+              <div><span className="font-bold">0</span> <span className="text-muted-foreground">подписок</span></div>
+            </div>
+          </>
+        )}
 
-      <div className="grid grid-cols-3 gap-1 px-1">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <div key={i} className="aspect-square rounded-xl overflow-hidden flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-            style={{ background: `linear-gradient(135deg, hsl(${30 + i * 4} 20% ${8 + i}%), hsl(${42 + i * 3} 40% ${14 + i}%))` }}>
-            <Icon name="Image" size={24} className="text-white/20" />
+        {/* Edit info */}
+        {editSection === "info" && (
+          <div className="space-y-3 mt-2 animate-fade-in">
+            <div><label className="text-xs text-muted-foreground mb-1 block">Имя</label><input className={inputCls} value={name} onChange={e => setName(e.target.value)} /></div>
+            <div><label className="text-xs text-muted-foreground mb-1 block">Никнейм</label>
+              <div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+                <input className={inputCls + " pl-7"} value={handle} onChange={e => setHandle(e.target.value)} />
+              </div>
+            </div>
+            <div><label className="text-xs text-muted-foreground mb-1 block">Биография</label>
+              <textarea className={inputCls + " resize-none"} rows={3} value={bio} onChange={e => setBio(e.target.value)} placeholder="Расскажи о себе..." />
+            </div>
+            {err && <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-xl px-3 py-2">{err}</p>}
+            <div className="flex gap-2">
+              <button className={btnPrimary} onClick={saveInfo} disabled={saving}>{saving ? "Сохраняю..." : "Сохранить"}</button>
+              <button className={btnMuted} onClick={() => { setEditSection("none"); setErr(""); }}>Отмена</button>
+            </div>
+            <div className="gold-divider my-1" />
+            <button onClick={() => { setEditSection("password"); setErr(""); }} className="text-sm text-primary hover:underline flex items-center gap-1.5">
+              <Icon name="Lock" size={14} /> Сменить пароль
+            </button>
+            <button onClick={() => { setEditSection("email"); setErr(""); }} className="text-sm text-primary hover:underline flex items-center gap-1.5">
+              <Icon name="Mail" size={14} /> Сменить email
+            </button>
           </div>
-        ))}
+        )}
+
+        {/* Change password */}
+        {editSection === "password" && (
+          <div className="space-y-3 mt-2 animate-fade-in">
+            <div><label className="text-xs text-muted-foreground mb-1 block">Текущий пароль</label><input type="password" className={inputCls} value={oldPw} onChange={e => setOldPw(e.target.value)} /></div>
+            <div><label className="text-xs text-muted-foreground mb-1 block">Новый пароль</label><input type="password" className={inputCls} value={newPw} onChange={e => setNewPw(e.target.value)} /></div>
+            <div><label className="text-xs text-muted-foreground mb-1 block">Повтори новый</label><input type="password" className={inputCls} value={newPw2} onChange={e => setNewPw2(e.target.value)} /></div>
+            {err && <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-xl px-3 py-2">{err}</p>}
+            <div className="flex gap-2">
+              <button className={btnPrimary} onClick={savePassword} disabled={saving}>{saving ? "Сохраняю..." : "Сменить пароль"}</button>
+              <button className={btnMuted} onClick={() => { setEditSection("none"); setErr(""); }}>Отмена</button>
+            </div>
+          </div>
+        )}
+
+        {/* Change email */}
+        {editSection === "email" && (
+          <div className="space-y-3 mt-2 animate-fade-in">
+            <div><label className="text-xs text-muted-foreground mb-1 block">Новый email</label><input type="email" className={inputCls} value={email} onChange={e => setEmail(e.target.value)} /></div>
+            {err && <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-xl px-3 py-2">{err}</p>}
+            <div className="flex gap-2">
+              <button className={btnPrimary} onClick={saveEmail} disabled={saving}>{saving ? "Сохраняю..." : "Сохранить email"}</button>
+              <button className={btnMuted} onClick={() => { setEditSection("none"); setErr(""); }}>Отмена</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {editSection === "none" && (
+        <>
+          <div className="flex border-b border-border mb-4 px-2">
+            {(["posts", "liked"] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                {t === "posts" ? "Публикации" : "Понравилось"}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-3 gap-1 px-1">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <div key={i} className="aspect-square rounded-xl overflow-hidden flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                style={{ background: `linear-gradient(135deg, hsl(${30 + i * 4} 20% ${8 + i}%), hsl(${42 + i * 3} 40% ${14 + i}%))` }}>
+                <Icon name="Image" size={24} className="text-white/20" />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Call Screen ──────────────────────────────────────────────────────────────
+
+function CallScreen({ contact, onEnd }: { contact: { name: string; avatar: string }; onEnd: () => void }) {
+  const [seconds, setSeconds] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const [speaker, setSpeaker] = useState(true);
+
+  useEffect(() => {
+    const t = setInterval(() => setSeconds(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-between py-20 px-8"
+      style={{ background: "radial-gradient(ellipse at 40% 30%, #1a1200 0%, #050502 100%)" }}>
+      <div className="flex flex-col items-center gap-4 animate-fade-in">
+        <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-yellow-600 to-amber-400 flex items-center justify-center text-4xl font-bold text-black mb-2 glow-gold">
+          {contact.avatar}
+        </div>
+        <h2 className="text-2xl font-bold">{contact.name}</h2>
+        <p className="text-muted-foreground text-sm">{seconds < 3 ? "Вызов..." : fmt(seconds)}</p>
+      </div>
+
+      <div className="flex flex-col items-center gap-8">
+        <div className="flex gap-6">
+          <button onClick={() => setMuted(!muted)}
+            className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${muted ? "bg-destructive text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}>
+            <Icon name={muted ? "MicOff" : "Mic"} size={22} />
+          </button>
+          <button onClick={() => setSpeaker(!speaker)}
+            className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${speaker ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+            <Icon name={speaker ? "Volume2" : "VolumeX"} size={22} />
+          </button>
+        </div>
+        <button onClick={onEnd}
+          className="w-18 h-18 w-20 h-20 rounded-full bg-destructive flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity active:scale-95">
+          <Icon name="PhoneOff" size={28} className="text-white" />
+        </button>
       </div>
     </div>
   );
@@ -441,6 +648,7 @@ function MessagesPage() {
   const [showWallpaper, setShowWallpaper] = useState(false);
   const [wallpaper, setWallpaper] = useState("none");
   const [customWallpaper, setCustomWallpaper] = useState<string | null>(null);
+  const [callContact, setCallContact] = useState<{ name: string; avatar: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const wallpaperRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -491,6 +699,10 @@ function MessagesPage() {
       ? { backgroundImage: `url(${customWallpaper})`, backgroundSize: "cover", backgroundPosition: "center" }
       : WALLPAPERS.find(w => w.id === wallpaper)?.style ?? {};
 
+  if (callContact) {
+    return <CallScreen contact={callContact} onEnd={() => setCallContact(null)} />;
+  }
+
   if (active) {
     return (
       <div className="max-w-xl mx-auto h-[calc(100vh-140px)] flex flex-col animate-scale-in">
@@ -505,8 +717,8 @@ function MessagesPage() {
             <div className="text-xs text-muted-foreground">{active.online ? "онлайн" : "не в сети"}</div>
           </div>
           <div className="ml-auto flex gap-1 text-muted-foreground">
-            <button className="p-2 hover:text-primary transition-colors rounded-xl hover:bg-muted/40"><Icon name="Phone" size={18} /></button>
-            <button className="p-2 hover:text-primary transition-colors rounded-xl hover:bg-muted/40"><Icon name="Video" size={18} /></button>
+            <button onClick={() => setCallContact({ name: active.name, avatar: active.avatar })} className="p-2 hover:text-primary transition-colors rounded-xl hover:bg-muted/40"><Icon name="Phone" size={18} /></button>
+            <button onClick={() => setCallContact({ name: active.name, avatar: active.avatar })} className="p-2 hover:text-primary transition-colors rounded-xl hover:bg-muted/40"><Icon name="Video" size={18} /></button>
             <button onClick={() => setShowWallpaper(v => !v)} className={`p-2 transition-colors rounded-xl hover:bg-muted/40 ${showWallpaper ? "text-primary" : "hover:text-primary"}`}>
               <Icon name="Palette" size={18} />
             </button>
@@ -674,7 +886,7 @@ function SearchPage() {
 
 // ─── Settings Page ────────────────────────────────────────────────────────────
 
-function SettingsPage() {
+function SettingsPage({ user, onUserUpdate, onLogout }: { user: FullUser; onUserUpdate: (u: FullUser) => void; onLogout: () => void }) {
   const [notifications, setNotifications] = useState(true);
   const [privateAcc, setPrivateAcc] = useState(false);
   const [showOnline, setShowOnline] = useState(true);
@@ -686,17 +898,12 @@ function SettingsPage() {
     </button>
   );
 
-  type SettingItem = { icon: string; label: string; sub?: string; toggle?: boolean; value?: boolean; onChange?: () => void; danger?: boolean };
+  const initials = user.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+
+  type SettingItem = { icon: string; label: string; sub?: string; toggle?: boolean; value?: boolean; onChange?: () => void; danger?: boolean; onClick?: () => void };
   type SettingSection = { title: string; items: SettingItem[] };
 
   const sections: SettingSection[] = [
-    {
-      title: "Аккаунт", items: [
-        { icon: "User", label: "Редактировать профиль", sub: "Имя, фото, биография" },
-        { icon: "Lock", label: "Сменить пароль", sub: "Безопасность аккаунта" },
-        { icon: "Mail", label: "Email", sub: "your@email.com" },
-      ],
-    },
     {
       title: "Приватность", items: [
         { icon: "Bell", label: "Уведомления", toggle: true, value: notifications, onChange: () => setNotifications(!notifications) },
@@ -708,7 +915,7 @@ function SettingsPage() {
       title: "Прочее", items: [
         { icon: "HelpCircle", label: "Помощь и поддержка", sub: "" },
         { icon: "Info", label: "О приложении", sub: "Eclipse v1.0" },
-        { icon: "LogOut", label: "Выйти", sub: "", danger: true },
+        { icon: "LogOut", label: "Выйти", sub: "", danger: true, onClick: onLogout },
       ],
     },
   ];
@@ -716,14 +923,14 @@ function SettingsPage() {
   return (
     <div className="max-w-xl mx-auto pb-8 space-y-6 animate-fade-in">
       <div className="post-card rounded-2xl p-4 flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-600 to-amber-400 flex items-center justify-center text-lg font-bold text-black">ВЫ</div>
-        <div>
-          <p className="font-bold text-lg leading-tight">Ваш Профиль</p>
-          <p className="text-muted-foreground text-sm">@yourhandle</p>
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-600 to-amber-400 flex items-center justify-center text-lg font-bold text-black overflow-hidden">
+          {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="" /> : initials}
         </div>
-        <button className="ml-auto p-2 hover:bg-muted/50 rounded-xl transition-colors">
-          <Icon name="ChevronRight" size={18} className="text-muted-foreground" />
-        </button>
+        <div>
+          <p className="font-bold text-lg leading-tight">{user.name}</p>
+          <p className="text-muted-foreground text-sm">{user.handle}</p>
+          {user.email && <p className="text-xs text-muted-foreground">{user.email}</p>}
+        </div>
       </div>
 
       {sections.map(section => (
@@ -731,7 +938,7 @@ function SettingsPage() {
           <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-1">{section.title}</h3>
           <div className="post-card rounded-2xl divide-y divide-border overflow-hidden">
             {section.items.map((item) => (
-              <div key={item.label} className="flex items-center gap-3 p-4 hover:bg-muted/20 transition-colors cursor-pointer">
+              <div key={item.label} onClick={item.onClick} className="flex items-center gap-3 p-4 hover:bg-muted/20 transition-colors cursor-pointer">
                 <div className={`p-2 rounded-xl ${item.danger ? "bg-destructive/15" : "bg-muted/60"}`}>
                   <Icon name={item.icon} size={18} className={item.danger ? "text-destructive" : "text-muted-foreground"} />
                 </div>
@@ -739,7 +946,7 @@ function SettingsPage() {
                   <p className={`text-sm font-medium ${item.danger ? "text-destructive" : ""}`}>{item.label}</p>
                   {item.sub && <p className="text-xs text-muted-foreground">{item.sub}</p>}
                 </div>
-                {item.toggle ? <Toggle value={item.value} onChange={item.onChange} /> : <Icon name="ChevronRight" size={16} className="text-muted-foreground" />}
+                {item.toggle ? <Toggle value={item.value!} onChange={item.onChange!} /> : <Icon name="ChevronRight" size={16} className="text-muted-foreground" />}
               </div>
             ))}
           </div>
@@ -908,10 +1115,15 @@ function AuthScreen({ onAuth }: { onAuth: (user: AuthUser) => void }) {
 // ─── App ─────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [user, setUser] = useState<AuthUser | null>(() => {
+  const [user, setUser] = useState<FullUser | null>(() => {
     try { const s = localStorage.getItem("eclipse_user"); return s ? JSON.parse(s) : null; } catch { return null; }
   });
   const [page, setPage] = useState<Page>("feed");
+
+  const updateUser = (u: FullUser) => {
+    setUser(u);
+    localStorage.setItem("eclipse_user", JSON.stringify(u));
+  };
 
   if (!user) return <AuthScreen onAuth={(u) => setUser(u)} />;
 
@@ -938,8 +1150,8 @@ export default function App() {
         </nav>
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/40 transition-all cursor-pointer group"
           onClick={() => { localStorage.removeItem("eclipse_user"); setUser(null); }}>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-600 to-amber-400 flex items-center justify-center text-xs font-bold text-black shrink-0">
-            {user.name.slice(0, 2).toUpperCase()}
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-600 to-amber-400 flex items-center justify-center text-xs font-bold text-black shrink-0 overflow-hidden">
+            {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="" /> : user.name.slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-medium text-sm leading-tight truncate">{user.name}</p>
@@ -961,8 +1173,8 @@ export default function App() {
           {page === "feed" && <FeedPage />}
           {page === "search" && <SearchPage />}
           {page === "messages" && <MessagesPage />}
-          {page === "profile" && <ProfilePage />}
-          {page === "settings" && <SettingsPage />}
+          {page === "profile" && <ProfilePage user={user} onUserUpdate={updateUser} />}
+          {page === "settings" && <SettingsPage user={user} onUserUpdate={updateUser} onLogout={() => { localStorage.removeItem("eclipse_user"); setUser(null); }} />}
         </div>
       </main>
 

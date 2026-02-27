@@ -1,0 +1,22 @@
+{
+  "tests": [
+    {
+      "name": "Get profile",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "get", "user_id": 1},
+      "expectedStatus": 200,
+      "expectedBody": {"user": {}},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Update bio",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "update", "user_id": 1, "bio": "Тест биографии"},
+      "expectedStatus": 200,
+      "expectedBody": {"user": {}},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

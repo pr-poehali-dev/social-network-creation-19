@@ -1,0 +1,3 @@
+ALTER TABLE t_p97916089_social_network_creat.users
+  ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS banner TEXT DEFAULT '';
